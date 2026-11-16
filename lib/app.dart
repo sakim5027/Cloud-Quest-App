@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/sign_in_screen.dart';
 import 'screens/challenge_screen.dart';
+import 'services/reward_service.dart';
 
 class CloudQuestApp extends StatelessWidget {
   const CloudQuestApp({super.key});
@@ -34,8 +35,14 @@ class CloudQuestApp extends StatelessWidget {
               : ChallengeScreen(
                   key: ValueKey(user.uid),
                   user: user,
-                  onComplete: () {
-                    // We will add the reward function later.
+                  onComplete: () async {
+                    try {
+                      final result = await completeChallenge();
+
+                      debugPrint('Reward result: $result');
+                    } catch (e) {
+                      debugPrint('Reward error: $e');
+                    }
                   },
                 );
         },

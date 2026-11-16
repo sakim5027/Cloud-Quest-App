@@ -71,7 +71,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
       if (!mounted) return;
       setState(() {
-        errorMessage = 'Registration failed: ${e.code}';
+        errorMessage = 'Registration failed: ${e.code} - ${e.message}';
       });
     } finally {
       if (mounted) {
