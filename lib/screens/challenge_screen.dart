@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+
 class ChallengeScreen extends StatelessWidget {
   const ChallengeScreen({
     super.key,
@@ -13,7 +15,24 @@ class ChallengeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Cloud Quest')),
+    appBar: AppBar(
+      title: const Text('Cloud Quest'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign Out',
+          onPressed: () async {
+            try {
+              await logOut();
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Unable to sign out.')),
+              );
+            }
+          },
+        ),
+      ],
+    ),
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [

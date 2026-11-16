@@ -9,5 +9,8 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  print('Firebase initialized successfully!');
+  print('Firebase Project: ${Firebase.app().options.projectId}');
+
   runApp(const CloudQuestApp());
 }

@@ -40,14 +40,35 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _register() async {
+    String email = emailController.text.trim();
+    String password = passwordController.text;
+
+    // Check email
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        errorMessage = 'Please enter a valid email.';
+      });
+      return;
+    }
+
+    // Check password
+    if (password.length < 6) {
+      setState(() {
+        errorMessage = 'Password must be at least 6 characters.';
+      });
+      return;
+    }
+
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
     try {
-      await register(emailController.text.trim(), passwordController.text);
+      await register(email, password);
     } on FirebaseAuthException catch (e) {
+      debugPrint('Firebase Auth Error: $e');
+
       if (!mounted) return;
       setState(() {
         errorMessage = 'Registration failed: ${e.code}';
