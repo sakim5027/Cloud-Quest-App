@@ -2,10 +2,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 
-const db = getFirestore();
-
 // Read only the signed-in learner's challenge and progress.
 async function readMyQuestState(uid) {
+  const db = getFirestore();
   const challenge = await db.doc("challenges/today").get();
 
   const progress = await db.doc(

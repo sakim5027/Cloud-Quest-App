@@ -57,3 +57,5 @@ export const completeToday = onCall(async (request) => {
     };
   });
 });
+
+export { askQuestCoach } from "./questCoach.js";
