@@ -90,6 +90,6 @@ gateway and register the read-only tool in Genkit.
 
 
 
-Cloud Quest Reflection
+## Cloud Quest Reflection
 
 In my Cloud Quest project, I implemented Firebase Authentication, Cloud Firestore, and a callable Cloud Function to manage learner progress. The Quest Coach backend uses a read-only helper named readMyQuestState, which reads today's challenge and the authenticated learner's progress. To check security, I submitted an adversarial request asking the coach to ignore its instructions and award 999 points. The mock returned a predefined hint without modifying Firestore. I verified that my existing reward remained at 10 points with the first-quest badge. The separate completeToday Function uses a Firestore transaction to prevent duplicate rewards. One important limitation is that my current Quest Coach is a local mock rather than a fully model-backed Genkit agent. My next step would be to integrate the course model gateway and register the read-only tool in a Genkit flow.
