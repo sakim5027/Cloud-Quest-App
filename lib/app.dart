@@ -5,8 +5,43 @@ import 'screens/sign_in_screen.dart';
 import 'screens/challenge_screen.dart';
 import 'services/reward_service.dart';
 
-class CloudQuestApp extends StatelessWidget {
+class CloudQuestApp extends StatefulWidget {
   const CloudQuestApp({super.key});
+
+  @override
+  State<CloudQuestApp> createState() => _CloudQuestAppState();
+}
+
+class _CloudQuestAppState extends State<CloudQuestApp> {
+  int refreshCount = 0;
+  bool isCompleting = false;
+
+  Future<void> _completeChallenge() async {
+    if (isCompleting) return;
+
+    setState(() {
+      isCompleting = true;
+    });
+
+    try {
+      final result = await completeChallenge();
+      debugPrint('Reward result: $result');
+
+      if (!mounted) return;
+
+      setState(() {
+        refreshCount++;
+      });
+    } catch (e) {
+      debugPrint('Reward error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isCompleting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,17 +68,10 @@ class CloudQuestApp extends StatelessWidget {
           return user == null
               ? const SignInScreen()
               : ChallengeScreen(
-                  key: ValueKey(user.uid),
+                  key: ValueKey('${user.uid}_$refreshCount'),
                   user: user,
-                  onComplete: () async {
-                    try {
-                      final result = await completeChallenge();
-
-                      debugPrint('Reward result: $result');
-                    } catch (e) {
-                      debugPrint('Reward error: $e');
-                    }
-                  },
+                  onComplete: _completeChallenge,
+                  isCompleting: isCompleting,
                 );
         },
       ),

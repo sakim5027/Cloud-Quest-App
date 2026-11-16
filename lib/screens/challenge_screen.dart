@@ -9,10 +9,12 @@ class ChallengeScreen extends StatelessWidget {
     super.key,
     required this.user,
     required this.onComplete,
+    this.isCompleting = false,
   });
 
   final User user;
   final VoidCallback onComplete;
+  final bool isCompleting;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -101,8 +103,14 @@ class ChallengeScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               FilledButton(
-                onPressed: completed ? null : onComplete,
-                child: Text(completed ? 'Completed!' : 'Complete challenge'),
+                onPressed: completed || isCompleting ? null : onComplete,
+                child: Text(
+                  completed
+                      ? 'Completed!'
+                      : isCompleting
+                      ? 'Completing...'
+                      : 'Complete challenge',
+                ),
               ),
 
               const SizedBox(height: 20),
