@@ -1,32 +1,59 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { initializeApp } from "firebase-admin/app";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+initializeApp();
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+const db = getFirestore();
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+export const completeToday = onCall(async (request) => {
+
+  // Check if the learner is signed in.
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in first.");
+  }
+
+  // Only allow today's challenge.
+  if (request.data?.challengeId !== "today") {
+    throw new HttpsError("invalid-argument", "Unknown challenge.");
+  }
+
+  // Get the signed-in learner's ID.
+  const uid = request.auth.uid;
+
+  const progressRef = db.doc(`users/${uid}/progress/today`);
+
+  // Use a transaction to prevent duplicate rewards.
+  return db.runTransaction(async (transaction) => {
+
+    const progress = await transaction.get(progressRef);
+
+    // Already completed: do not award points again.
+    if (progress.exists) {
+      return {
+        completed: true,
+        points: progress.data().points,
+        badgeId: progress.data().badgeId,
+        alreadyCompleted: true
+      };
+    }
+
+    // First completion: award 10 points and one badge.
+    const reward = {
+      completed: true,
+      points: 10,
+      badgeId: "first-quest",
+      completedAt: FieldValue.serverTimestamp()
+    };
+
+    transaction.set(progressRef, reward);
+
+    return {
+      completed: true,
+      points: reward.points,
+      badgeId: reward.badgeId,
+      alreadyCompleted: false
+    };
+  });
+});
