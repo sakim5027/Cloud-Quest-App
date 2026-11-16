@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/challenge_service.dart';
+import '../services/coach_service.dart';
 
-class ChallengeScreen extends StatelessWidget {
+class ChallengeScreen extends StatefulWidget {
   const ChallengeScreen({
     super.key,
     required this.user,
@@ -15,6 +17,69 @@ class ChallengeScreen extends StatelessWidget {
   final User user;
   final VoidCallback onComplete;
   final bool isCompleting;
+
+  @override
+  State<ChallengeScreen> createState() => _ChallengeScreenState();
+}
+
+class _ChallengeScreenState extends State<ChallengeScreen> {
+  final questionController = TextEditingController();
+
+  bool isLoading = false;
+  String coachReply = '';
+
+  // Ask the Quest Coach for a hint
+  Future<void> _getHint() async {
+    if (questionController.text.trim().isEmpty) {
+      setState(() {
+        coachReply = 'Please enter a question.';
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      coachReply = '';
+    });
+
+    try {
+      final reply = await getQuestHint(questionController.text);
+
+      if (!mounted) return;
+
+      setState(() {
+        coachReply = reply;
+      });
+    } on FirebaseFunctionsException catch (error) {
+      debugPrint('Quest Coach request failed: ${error.code}');
+
+      if (!mounted) return;
+
+      setState(() {
+        coachReply = 'The coach is unavailable. Try again.';
+      });
+    } catch (error) {
+      debugPrint('Quest Coach error: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        coachReply = 'Something went wrong. Try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    questionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -34,37 +99,29 @@ class ChallengeScreen extends StatelessWidget {
       child: FutureBuilder<Map<String, Object?>>(
         future: loadToday(),
         builder: (context, snapshot) {
-          // While loading Firestore data
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // If Firestore returns an error
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error loading challenge: ${snapshot.error}'),
-            );
+            return const Center(child: Text('Unable to load challenge.'));
           }
 
-          // Get challenge and progress
           final data = snapshot.data!;
 
           final challenge = data['challenge'] as Map<String, dynamic>?;
 
           final progress = data['progress'] as Map<String, dynamic>?;
 
-          // If today's challenge does not exist
           if (challenge == null) {
             return const Center(
               child: Text("Today's challenge is not available."),
             );
           }
 
-          // Get challenge information
           final title = challenge['title'] ?? '';
           final prompt = challenge['prompt'] ?? '';
 
-          // Get learner progress
           final completed = progress?['completed'] == true;
           final points = progress?['points'] ?? 0;
           final badge = progress?['badgeId'] ?? 'None';
@@ -72,7 +129,7 @@ class ChallengeScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text('Signed in as ${user.email ?? user.uid}'),
+              Text('Signed in as ${widget.user.email ?? widget.user.uid}'),
 
               const SizedBox(height: 20),
 
@@ -102,12 +159,15 @@ class ChallengeScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
+              // Complete challenge button
               FilledButton(
-                onPressed: completed || isCompleting ? null : onComplete,
+                onPressed: completed || widget.isCompleting
+                    ? null
+                    : widget.onComplete,
                 child: Text(
                   completed
                       ? 'Completed!'
-                      : isCompleting
+                      : widget.isCompleting
                       ? 'Completing...'
                       : 'Complete challenge',
                 ),
@@ -115,14 +175,30 @@ class ChallengeScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              const TextField(
+              // Quest Coach question
+              TextField(
+                controller: questionController,
                 maxLength: 300,
-                decoration: InputDecoration(
+                maxLines: 2,
+                decoration: const InputDecoration(
                   labelText: 'Ask the Quest Coach for a hint',
+                  border: OutlineInputBorder(),
                 ),
               ),
 
-              OutlinedButton(onPressed: () {}, child: const Text('Get hint')),
+              const SizedBox(height: 10),
+
+              // Get hint button
+              OutlinedButton(
+                onPressed: isLoading ? null : _getHint,
+                child: Text(isLoading ? 'Thinking...' : 'Get hint'),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Display the AI response
+              if (coachReply.isNotEmpty)
+                Text(coachReply, style: const TextStyle(fontSize: 16)),
             ],
           );
         },
